@@ -49,39 +49,39 @@ func (Auth) CaddyModule() caddy.ModuleInfo {
 // In the future consider alternative approach if Caddy supports unwrapping listeners.
 // See discussion in https://github.com/tailscale/caddy-tailscale/pull/70
 func findTsnetListener(ln net.Listener) (_ tsnetListener, ok bool) {
-	if ln == nil {
-		return nil, false
-	}
+	// if ln == nil {
+	// 	return nil, false
+	// }
 
-	// if ln is a tsnetListener, return it.
-	if tsn, ok := ln.(tsnetListener); ok {
-		return tsn, true
-	}
+	// // if ln is a tsnetListener, return it.
+	// if tsn, ok := ln.(tsnetListener); ok {
+	// 	return tsn, true
+	// }
 
-	// if ln is a wrappedListener, unwrap it.
-	if wl, ok := ln.(wrappedListener); ok {
-		return findTsnetListener(wl.Unwrap())
-	}
+	// // if ln is a wrappedListener, unwrap it.
+	// if wl, ok := ln.(wrappedListener); ok {
+	// 	return findTsnetListener(wl.Unwrap())
+	// }
 
-	// if ln has an embedded net.Listener field, unwrap it.
-	s := reflect.ValueOf(ln)
-	if s.Kind() == reflect.Ptr {
-		s = s.Elem()
-	}
-	if s.Kind() != reflect.Struct {
-		return nil, false
-	}
+	// // if ln has an embedded net.Listener field, unwrap it.
+	// s := reflect.ValueOf(ln)
+	// if s.Kind() == reflect.Ptr {
+	// 	s = s.Elem()
+	// }
+	// if s.Kind() != reflect.Struct {
+	// 	return nil, false
+	// }
 
-	innerLn := s.FieldByName("Listener")
-	if innerLn.IsZero() {
-		// no more child/embedded listeners left
-		return nil, false
-	}
+	// innerLn := s.FieldByName("Listener")
+	// if innerLn.IsZero() {
+	// 	// no more child/embedded listeners left
+	// 	return nil, false
+	// }
 
-	// if the "Listener" field is a net.Listener, use it.
-	if wl, ok := innerLn.Interface().(net.Listener); ok {
-		return findTsnetListener(wl)
-	}
+	// // if the "Listener" field is a net.Listener, use it.
+	// if wl, ok := innerLn.Interface().(net.Listener); ok {
+	// 	return findTsnetListener(wl)
+	// }
 	return nil, false
 }
 
