@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"reflect"
+	// "reflect"
 	"strings"
 
 	"github.com/caddyserver/caddy/v2"
