@@ -6,10 +6,12 @@ package tscaddy
 // auth.go contains the TailscaleAuth module and supporting logic.
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
-	"reflect"
+
+	// "reflect"
 	"strings"
 
 	"github.com/caddyserver/caddy/v2"
@@ -49,39 +51,39 @@ func (Auth) CaddyModule() caddy.ModuleInfo {
 // In the future consider alternative approach if Caddy supports unwrapping listeners.
 // See discussion in https://github.com/tailscale/caddy-tailscale/pull/70
 func findTsnetListener(ln net.Listener) (_ tsnetListener, ok bool) {
-	if ln == nil {
-		return nil, false
-	}
+	// if ln == nil {
+	// 	return nil, false
+	// }
 
-	// if ln is a tsnetListener, return it.
-	if tsn, ok := ln.(tsnetListener); ok {
-		return tsn, true
-	}
+	// // if ln is a tsnetListener, return it.
+	// if tsn, ok := ln.(tsnetListener); ok {
+	// 	return tsn, true
+	// }
 
-	// if ln is a wrappedListener, unwrap it.
-	if wl, ok := ln.(wrappedListener); ok {
-		return findTsnetListener(wl.Unwrap())
-	}
+	// // if ln is a wrappedListener, unwrap it.
+	// if wl, ok := ln.(wrappedListener); ok {
+	// 	return findTsnetListener(wl.Unwrap())
+	// }
 
-	// if ln has an embedded net.Listener field, unwrap it.
-	s := reflect.ValueOf(ln)
-	if s.Kind() == reflect.Ptr {
-		s = s.Elem()
-	}
-	if s.Kind() != reflect.Struct {
-		return nil, false
-	}
+	// // if ln has an embedded net.Listener field, unwrap it.
+	// s := reflect.ValueOf(ln)
+	// if s.Kind() == reflect.Ptr {
+	// 	s = s.Elem()
+	// }
+	// if s.Kind() != reflect.Struct {
+	// 	return nil, false
+	// }
 
-	innerLn := s.FieldByName("Listener")
-	if innerLn.IsZero() {
-		// no more child/embedded listeners left
-		return nil, false
-	}
+	// innerLn := s.FieldByName("Listener")
+	// if innerLn.IsZero() {
+	// 	// no more child/embedded listeners left
+	// 	return nil, false
+	// }
 
-	// if the "Listener" field is a net.Listener, use it.
-	if wl, ok := innerLn.Interface().(net.Listener); ok {
-		return findTsnetListener(wl)
-	}
+	// // if the "Listener" field is a net.Listener, use it.
+	// if wl, ok := innerLn.Interface().(net.Listener); ok {
+	// 	return findTsnetListener(wl)
+	// }
 	return nil, false
 }
 
@@ -164,6 +166,42 @@ func (ta Auth) Authenticate(w http.ResponseWriter, r *http.Request) (caddyauth.U
 		"tailscale_profile_picture": info.UserProfile.ProfilePicURL,
 		"tailscale_tailnet":         tailnet,
 	}
+
+	// TODO: won't work too well with duplicates :)
+	if services, ok := info.CapMap["myth-bee.ts.net/cap/caddy-services"]; ok {
+		serviceNames := make([]string, 0)
+		for _, sRaw := range services {
+			s := make(map[string]string)
+			if err := json.Unmarshal([]byte(sRaw), &s); err == nil {
+				if name, ok := s["service"]; ok {
+					serviceNames = append(serviceNames, name)
+					for k, v := range s {
+						if k == "service" {
+							continue
+						}
+
+						user.Metadata[fmt.Sprintf("tailscale_services.%s.%s", name, k)] = v
+					}
+				}
+			}
+
+		}
+
+		user.Metadata["tailscale_service_ids"] = strings.Join(serviceNames, ",") + ","
+	}
+
+	user.Metadata["tailscale_short_name"] = strings.Split(info.UserProfile.DisplayName, " ")[0]
+	if globals, ok := info.CapMap["myth-bee.ts.net/cap/caddy-globals"]; ok {
+		for _, gRaw := range globals {
+			g := make(map[string]string)
+			if err := json.Unmarshal([]byte(gRaw), &g); err == nil {
+				if v, ok := g["short_name"]; ok {
+					user.Metadata["tailscale_short_name"] = v
+				}
+			}
+		}
+	}
+
 	return user, true, nil
 }
 
