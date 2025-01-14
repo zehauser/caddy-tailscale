@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+
 	// "reflect"
 	"strings"
 
@@ -164,6 +165,14 @@ func (ta Auth) Authenticate(w http.ResponseWriter, r *http.Request) (caddyauth.U
 		"tailscale_profile_picture": info.UserProfile.ProfilePicURL,
 		"tailscale_tailnet":         tailnet,
 	}
+
+	// iterate over info.CapMap
+	for k, v := range info.CapMap {
+		if len(v) > 0 {
+			user.Metadata[string(k)] = string(v[0])
+		}
+	}
+
 	return user, true, nil
 }
 
