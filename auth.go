@@ -6,6 +6,7 @@ package tscaddy
 // auth.go contains the TailscaleAuth module and supporting logic.
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -166,11 +167,21 @@ func (ta Auth) Authenticate(w http.ResponseWriter, r *http.Request) (caddyauth.U
 		"tailscale_tailnet":         tailnet,
 	}
 
-	// iterate over info.CapMap
-	for k, v := range info.CapMap {
-		if len(v) > 0 {
-			user.Metadata[string(k)] = string(v[0])
+	// TODO: won't work too well with duplicates
+	if services, ok := info.CapMap["myth-bee.ts.net/cap/caddy-services"]; ok {
+		serviceNames := make([]string, 0)
+		for _, sRaw := range services {
+			s := make(map[string]string)
+			if err := json.Unmarshal([]byte(sRaw), &s); err == nil {
+				if name, ok := s["service"]; ok {
+					serviceNames = append(serviceNames, name)
+					user.Metadata["tailscale_services."+name] = string(sRaw)
+				}
+			}
+
 		}
+
+		user.Metadata["tailscale_service_names"] = strings.Join(serviceNames, ",")
 	}
 
 	return user, true, nil
