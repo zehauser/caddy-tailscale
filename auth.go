@@ -167,7 +167,7 @@ func (ta Auth) Authenticate(w http.ResponseWriter, r *http.Request) (caddyauth.U
 		"tailscale_tailnet":         tailnet,
 	}
 
-	// TODO: won't work too well with duplicates
+	// TODO: won't work too well with duplicates :)
 	if services, ok := info.CapMap["myth-bee.ts.net/cap/caddy-services"]; ok {
 		serviceNames := make([]string, 0)
 		for _, sRaw := range services {
